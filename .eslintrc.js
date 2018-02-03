@@ -8,6 +8,10 @@ module.exports = {
     browser: true,
     es6: true
   },
+  globals: {
+    '$':true
+  },
+
   extends: [
     'eslint:recommended',
     'prettier',

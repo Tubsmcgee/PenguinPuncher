@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/Tubsmcgee/PenguinPuncher#readme",
   "devDependencies": {
+    "babel-eslint": "^8.2.1",
     "eslint": "^4.16.0",
     "eslint-config-prettier": "^2.9.0",
     "eslint-plugin-import": "^2.8.0",
