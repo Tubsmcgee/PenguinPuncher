@@ -2,6 +2,16 @@
 
 import {Renderer} from './renderer.js';
 
+const isHitting = (player, penguin) => {
+  if (player.punchCounter <= 0) return false;
+  const fistDist = Math.hypot(player.armLength, player.rad / 2);
+  const fistAngle =
+    Math.atan2(player.rad / 2, player.armLength) + player.langle;
+  const fistX = Math.cos(fistAngle) * fistDist + player.x;
+  const fistY = Math.sin(fistAngle) * fistDist + player.y;
+  return Math.hypot(fistX - penguin.x, fistY - penguin.y) < penguin.rad;
+};
+
 const overlapFix = (a, b) => {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
@@ -55,6 +65,7 @@ const movementTypes = [
 ];
 
 const movePenguin = (penguin, player, frame) => {
+  if (penguin.dead) return;
   const dx = player.x - penguin.x;
   const dy = player.y - penguin.y;
   const dist = Math.hypot(dx, dy);
@@ -70,10 +81,22 @@ const movePenguin = (penguin, player, frame) => {
     penguin.langle = langle;
   } else {
     movementTypes[penguin.type](penguin, frame);
+    if (isHitting(player, penguin)) {
+      penguin.dead = true;
+    }
   }
 };
 
-const player = {x: 0, y: 0, rad: 25, width: 50, height: 80, langle: 0};
+const player = {
+  x: 0,
+  y: 0,
+  rad: 25,
+  langle: 0,
+  punchCounter: 0,
+  punchingDuration: 25,
+  punchDelay: 85,
+  armLength: 50
+};
 const pressing = {};
 const penguins = [];
 let frame = 0;
@@ -86,11 +109,10 @@ for (let i = 0; i < numPengs; i++) {
     type: i % 2,
     speed: Math.random() * 0.5 + 0.2,
     sightDist: Math.random() * 200 + 100,
-    sightAngle: Math.random() * Math.PI / 16 + Math.PI / 16,
+    sightAngle: Math.random() * Math.PI / 16 + Math.PI / 8,
     langle: angle,
-    width: 40,
-    height: 60,
-    rad: 20
+    rad: 20,
+    dead: false
   };
 }
 
@@ -111,13 +133,16 @@ const loop = () => {
   if (pressing.s || pressing.ArrowDown) moveY++;
   if (pressing.d || pressing.ArrowRight) moveX++;
   if (pressing.w || pressing.ArrowUp) moveY--;
+  if (pressing.f && player.punchCounter < -player.punchDelay) {
+    player.punchCounter = player.punchingDuration;
+  }
   if (moveX || moveY) {
     const m = 1 / Math.hypot(moveX, moveY);
     player.x += moveX * m;
     player.y += moveY * m;
     player.langle = Math.atan2(moveY, moveX);
   }
-
+  player.punchCounter--;
   penguins.forEach(penguin => movePenguin(penguin, player, frame));
   collideFix([...penguins, player]);
   renderer.render(penguins, player);
