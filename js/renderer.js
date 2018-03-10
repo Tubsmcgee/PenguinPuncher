@@ -1,5 +1,23 @@
 'use strict';
 
+const drawPeng = (pengObj, beakColor, ctx) => {
+  //peng body
+  ctx.fillStyle = 'black';
+  ctx.beginPath();
+  ctx.arc(0, 0, pengObj.rad, 0, 2 * Math.PI);
+  ctx.fill();
+  //peng beak
+  ctx.save();
+  ctx.rotate(pengObj.langle);
+  ctx.fillStyle = beakColor;
+  ctx.beginPath();
+  ctx.moveTo(pengObj.rad, pengObj.rad / 2);
+  ctx.lineTo(pengObj.rad * 1.3, 0);
+  ctx.lineTo(pengObj.rad, -pengObj.rad / 2);
+  ctx.fill();
+  ctx.restore();
+};
+
 export class Renderer {
   constructor({canvas, width, height, backgroundImage}) {
     this.canvas = canvas
@@ -16,17 +34,14 @@ export class Renderer {
     }
     ctx.clearRect(0, 0, width, height);
     ctx.save();
-    ctx.translate(width / 2 - player.x, height / 2 - player.y);
-    ctx.fillRect(
-      -player.width / 2 + player.x,
-      -player.height / 2 + player.y,
-      player.width,
-      player.height
-    );
+    ctx.translate(width / 2, height / 2);
+    drawPeng(player, 'yellow', ctx);
+    //penguin drawing
+    ctx.translate(-player.x, -player.y);
     penguins.forEach(penguin => {
       ctx.save();
       ctx.translate(penguin.x, penguin.y);
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+      ctx.fillStyle = 'rgba(200, 200, 255, 0.25)';
       ctx.beginPath();
       ctx.arc(
         0,
@@ -37,23 +52,7 @@ export class Renderer {
       );
       ctx.lineTo(0, 0);
       ctx.fill();
-      ctx.fillStyle = 'black';
-      ctx.fillRect(
-        -penguin.width / 2,
-        -penguin.height / 2,
-        penguin.width,
-        penguin.height
-      );
-      ctx.fillStyle = 'orange';
-      ctx.fillRect(
-        penguin.width / 2 * Math.cos(penguin.langle) - 2.5,
-        penguin.width / 2 * (Math.sin(penguin.langle) + 1) -
-          2.5 -
-          penguin.height / 2,
-        5,
-        5
-      );
-
+      drawPeng(penguin, 'orange', ctx);
       ctx.restore();
     });
     ctx.restore();

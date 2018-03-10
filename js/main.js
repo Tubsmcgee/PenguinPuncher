@@ -2,23 +2,24 @@
 
 import {Renderer} from './renderer.js';
 
-const overlapTest = (a, b) => {
-  const overlapX = (a.width + b.width) / 2 - Math.abs(a.x - b.x);
-  const overlapY = (a.height + b.height) / 2 - Math.abs(a.y - b.y);
-  if (overlapX > 0 && overlapY > 0) {
-    if (overlapX > overlapY) {
-      //TODO: which is higher? change Y
-      a.y;
-    } else {
-      //TODO: which is to the left and right?
-    }
+const overlapFix = (a, b) => {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  const dist = Math.hypot(dx, dy);
+  const overlap = a.rad + b.rad - dist;
+  if (overlap > 0) {
+    const m = overlap / 2 / dist;
+    a.x += m * dx;
+    a.y += m * dy;
+    b.x -= m * dx;
+    b.y -= m * dy;
   }
 };
 
-const collideCompare = objects => {
+const collideFix = objects => {
   for (let i = 0; i < objects.length; i++) {
     for (let j = i + 1; j < objects.length; j++) {
-      overlapTest(objects[i], objects[j]);
+      overlapFix(objects[i], objects[j]);
     }
   }
 };
@@ -57,13 +58,13 @@ const movePenguin = (penguin, player, frame) => {
   const dx = player.x - penguin.x;
   const dy = player.y - penguin.y;
   const dist = Math.hypot(dx, dy);
-  const M = penguin.speed / dist;
   const langle = getAngle(dy, dx);
   const absDiff = Math.abs(langle - penguin.langle);
   if (
     dist < penguin.sightDist &&
     (absDiff < penguin.sightAngle || absDiff > 2 * Math.PI - penguin.sightAngle)
   ) {
+    const M = penguin.speed / dist;
     penguin.x += dx * M;
     penguin.y += dy * M;
     penguin.langle = langle;
@@ -72,7 +73,7 @@ const movePenguin = (penguin, player, frame) => {
   }
 };
 
-const player = {x: 0, y: 0, width: 50, height: 80};
+const player = {x: 0, y: 0, rad: 25, width: 50, height: 80, langle: 0};
 const pressing = {};
 const penguins = [];
 let frame = 0;
@@ -88,7 +89,8 @@ for (let i = 0; i < numPengs; i++) {
     sightAngle: Math.random() * Math.PI / 16 + Math.PI / 16,
     langle: angle,
     width: 40,
-    height: 60
+    height: 60,
+    rad: 20
   };
 }
 
@@ -103,12 +105,21 @@ const renderer = new Renderer({
 const loop = () => {
   player.px = player.x;
   player.py = player.y;
-  if (pressing.a || pressing.ArrowLeft) player.x--;
-  if (pressing.s || pressing.ArrowDown) player.y++;
-  if (pressing.d || pressing.ArrowRight) player.x++;
-  if (pressing.w || pressing.ArrowUp) player.y--;
-  penguins.forEach(penguin => movePenguin(penguin, player, frame));
+  let moveX = 0;
+  let moveY = 0;
+  if (pressing.a || pressing.ArrowLeft) moveX--;
+  if (pressing.s || pressing.ArrowDown) moveY++;
+  if (pressing.d || pressing.ArrowRight) moveX++;
+  if (pressing.w || pressing.ArrowUp) moveY--;
+  if (moveX || moveY) {
+    const m = 1 / Math.hypot(moveX, moveY);
+    player.x += moveX * m;
+    player.y += moveY * m;
+    player.langle = Math.atan2(moveY, moveX);
+  }
 
+  penguins.forEach(penguin => movePenguin(penguin, player, frame));
+  collideFix([...penguins, player]);
   renderer.render(penguins, player);
 
   frame++;
