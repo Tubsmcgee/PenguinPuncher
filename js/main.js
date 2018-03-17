@@ -18,16 +18,21 @@ const overlapFix = (a, b) => {
   const dist = Math.hypot(dx, dy);
   const overlap = a.rad + b.rad - dist;
   if (overlap > 0) {
-    const m = overlap / 2 / dist;
+    const m = b.isStationary ? overlap / dist : overlap / 2 / dist;
     a.x += m * dx;
     a.y += m * dy;
-    b.x -= m * dx;
-    b.y -= m * dy;
+    if (!b.isStationary) {
+      b.x -= m * dx;
+      b.y -= m * dy;
+    }
   }
 };
 
-const collideFix = objects => {
+const collideFix = (objects, rocks) => {
   for (let i = 0; i < objects.length; i++) {
+    for (let x = 0; x < rocks.length; x++) {
+      overlapFix(objects[i], rocks[x]);
+    }
     for (let j = i + 1; j < objects.length; j++) {
       overlapFix(objects[i], objects[j]);
     }
@@ -40,6 +45,7 @@ const getAngle = (dy, dx) => {
 };
 
 const numPengs = 5;
+const numRocks = 3;
 
 const movementTypes = [
   (penguin, frame) => {
@@ -98,14 +104,15 @@ const player = {
   armLength: 50
 };
 const pressing = {};
+const rocks = [];
 const penguins = [];
 let frame = 0;
 
 for (let i = 0; i < numPengs; i++) {
   const angle = i / numPengs * 2 * Math.PI;
   penguins[i] = {
-    x: 200 * Math.cos(angle),
-    y: 200 * Math.sin(angle),
+    x: 300 * Math.cos(angle),
+    y: 300 * Math.sin(angle),
     type: i % 2,
     speed: Math.random() * 0.5 + 0.2,
     sightDist: Math.random() * 200 + 100,
@@ -113,6 +120,16 @@ for (let i = 0; i < numPengs; i++) {
     langle: angle,
     rad: 20,
     dead: false
+  };
+}
+
+for (let x = 0; x < numRocks; x++) {
+  const angle = x / numRocks * 2 * Math.PI;
+  rocks[x] = {
+    x: 200 * Math.cos(angle),
+    y: 200 * Math.sin(angle),
+    rad: 30,
+    isStationary: true
   };
 }
 
@@ -144,8 +161,8 @@ const loop = () => {
   }
   player.punchCounter--;
   penguins.forEach(penguin => movePenguin(penguin, player, frame));
-  collideFix([...penguins, player]);
-  renderer.render(penguins, player);
+  collideFix([...penguins, player], rocks);
+  renderer.render(penguins, player, rocks);
 
   frame++;
   requestAnimationFrame(loop);

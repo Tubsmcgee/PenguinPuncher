@@ -43,7 +43,7 @@ export class Renderer {
     this.width = width;
     this.height = height;
   }
-  render(penguins, player) {
+  render(penguins, player, rocks) {
     const {width, height, canvas} = this;
     const ctx = canvas[0].getContext('2d');
     if (player.px !== player.x || player.py !== player.y) {
@@ -56,6 +56,14 @@ export class Renderer {
     penguins.forEach(penguin => {
       drawPeng(penguin, 'orange', ctx);
     });
+    //Rocks
+    ctx.fillStyle = 'grey';
+    ctx.beginPath();
+    rocks.forEach(rock => {
+      ctx.moveTo(rock.rad + rock.x, rock.y);
+      ctx.arc(rock.x, rock.y, rock.rad, 0, 2 * Math.PI);
+    });
+    ctx.fill();
     ctx.restore();
   }
 }
