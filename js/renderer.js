@@ -1,7 +1,18 @@
 'use strict';
 
 const drawPeng = (
-  {rad, langle, punchCounter, armLength, dead, x, y, sightDist, sightAngle},
+  {
+    rad,
+    langle,
+    punchCounter,
+    armLength,
+    dead,
+    x,
+    y,
+    sightDist,
+    sightAngle,
+    ray
+  },
   beakColor,
   ctx
 ) => {
@@ -33,6 +44,14 @@ const drawPeng = (
     ctx.fill();
   }
   ctx.restore();
+  //draw ray
+  // if (ray) {
+  //   ctx.strokeStyle = 'green';
+  //   ctx.beginPath();
+  //   ctx.moveTo(x, y);
+  //   ctx.lineTo(ray.x, ray.y);
+  //   ctx.stroke();
+  // }
 };
 
 export class Renderer {

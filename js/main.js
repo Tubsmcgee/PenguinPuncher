@@ -1,6 +1,52 @@
 'use strict';
 
 import {Renderer} from './renderer.js';
+let player, rocks, penguins, frame;
+const numPengs = 12;
+const numRocks = 3;
+const pressing = {};
+
+const reset = () => {
+  player = {
+    x: 0,
+    y: 0,
+    rad: 25,
+    langle: 0,
+    punchCounter: 0,
+    punchingDuration: 25,
+    punchDelay: 85,
+    armLength: 50
+  };
+
+  rocks = [];
+  penguins = [];
+  frame = 0;
+
+  for (let i = 0; i < numPengs; i++) {
+    const angle = i / numPengs * 2 * Math.PI;
+    penguins[i] = {
+      x: 300 * Math.cos(angle),
+      y: 300 * Math.sin(angle),
+      type: i % 2,
+      speed: Math.random() * 0.5 + 0.4,
+      sightDist: Math.random() * 200 + 200,
+      sightAngle: Math.random() * Math.PI / 16 + Math.PI / 4,
+      langle: angle,
+      rad: 20,
+      dead: false
+    };
+  }
+
+  for (let x = 0; x < numRocks; x++) {
+    const angle = x / numRocks * 2 * Math.PI;
+    rocks[x] = {
+      x: 200 * Math.cos(angle),
+      y: 200 * Math.sin(angle),
+      rad: 30,
+      isStationary: true
+    };
+  }
+};
 
 const isHitting = (player, penguin) => {
   if (player.punchCounter <= 0) return false;
@@ -39,13 +85,40 @@ const collideFix = (objects, rocks) => {
   }
 };
 
+const obstructed = (penguin, player, rocks) => {
+  const dx = player.x - penguin.x;
+  const dy = player.y - penguin.y;
+  const dist = Math.hypot(dx, dy);
+
+  const ray = (penguin.ray = {x: penguin.x, y: penguin.y});
+  for (let j = 0; j < 10; j++) {
+    let minDist = Infinity;
+    for (let i = 0; i < rocks.length; i++) {
+      const rdx = rocks[i].x - ray.x;
+      const rdy = rocks[i].y - ray.y;
+      const rdist = Math.hypot(rdx, rdy) - rocks[i].rad;
+
+      minDist = Math.min(minDist, rdist);
+    }
+    if (minDist > 1) {
+      ray.x += minDist * dx / dist;
+      ray.y += minDist * dy / dist;
+      if (
+        Math.hypot(penguin.x - ray.x, penguin.y - ray.y) >=
+        dist - player.rad
+      ) {
+        return false;
+      }
+    } else {
+      return true;
+    }
+  }
+};
+
 const getAngle = (dy, dx) => {
   const a = Math.atan2(dy, dx);
   return a < 0 ? a + Math.PI * 2 : a;
 };
-
-const numPengs = 5;
-const numRocks = 3;
 
 const movementTypes = [
   (penguin, frame) => {
@@ -70,7 +143,7 @@ const movementTypes = [
   }
 ];
 
-const movePenguin = (penguin, player, frame) => {
+const movePenguin = (penguin, player, frame, rocks) => {
   if (penguin.dead) return;
   const dx = player.x - penguin.x;
   const dy = player.y - penguin.y;
@@ -79,7 +152,16 @@ const movePenguin = (penguin, player, frame) => {
   const absDiff = Math.abs(langle - penguin.langle);
   if (
     dist < penguin.sightDist &&
-    (absDiff < penguin.sightAngle || absDiff > 2 * Math.PI - penguin.sightAngle)
+    (absDiff < penguin.sightAngle ||
+      absDiff > 2 * Math.PI - penguin.sightAngle) &&
+    !obstructed(
+      penguin,
+      player,
+      rocks.filter(
+        rock => Math.hypot(penguin.x - rock.x, penguin.y - rock.y) < dist
+      )
+    )
+    //make rocks not global
   ) {
     const M = penguin.speed / dist;
     penguin.x += dx * M;
@@ -92,46 +174,6 @@ const movePenguin = (penguin, player, frame) => {
     }
   }
 };
-
-const player = {
-  x: 0,
-  y: 0,
-  rad: 25,
-  langle: 0,
-  punchCounter: 0,
-  punchingDuration: 25,
-  punchDelay: 85,
-  armLength: 50
-};
-const pressing = {};
-const rocks = [];
-const penguins = [];
-let frame = 0;
-
-for (let i = 0; i < numPengs; i++) {
-  const angle = i / numPengs * 2 * Math.PI;
-  penguins[i] = {
-    x: 300 * Math.cos(angle),
-    y: 300 * Math.sin(angle),
-    type: i % 2,
-    speed: Math.random() * 0.5 + 0.2,
-    sightDist: Math.random() * 200 + 100,
-    sightAngle: Math.random() * Math.PI / 16 + Math.PI / 8,
-    langle: angle,
-    rad: 20,
-    dead: false
-  };
-}
-
-for (let x = 0; x < numRocks; x++) {
-  const angle = x / numRocks * 2 * Math.PI;
-  rocks[x] = {
-    x: 200 * Math.cos(angle),
-    y: 200 * Math.sin(angle),
-    rad: 30,
-    isStationary: true
-  };
-}
 
 const renderer = new Renderer({
   canvas: $('#canvas'),
@@ -160,16 +202,18 @@ const loop = () => {
     player.langle = Math.atan2(moveY, moveX);
   }
   player.punchCounter--;
-  penguins.forEach(penguin => movePenguin(penguin, player, frame));
+  penguins.forEach(penguin => movePenguin(penguin, player, frame, rocks));
   collideFix([...penguins, player], rocks);
   renderer.render(penguins, player, rocks);
 
   frame++;
   requestAnimationFrame(loop);
 };
+reset();
 loop();
 
 $(window).on('keyup keydown', e => {
   const key = e.originalEvent.key;
   pressing[key] = e.type === 'keydown';
+  if (pressing.r) reset();
 });
