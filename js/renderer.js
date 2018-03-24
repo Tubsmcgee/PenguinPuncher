@@ -1,5 +1,10 @@
 'use strict';
 
+const MeterWidth = 40;
+const MeterHeight = 5;
+const MeterDist = 5;
+const MeterColors = ['green', 'yellow', 'orange', 'red'];
+
 const drawPeng = (
   {
     rad,
@@ -10,8 +15,8 @@ const drawPeng = (
     x,
     y,
     sightDist,
-    sightAngle,
-    ray
+    sightAngle
+    // ray
   },
   beakColor,
   ctx
@@ -83,6 +88,18 @@ export class Renderer {
       ctx.arc(rock.x, rock.y, rock.rad, 0, 2 * Math.PI);
     });
     ctx.fill();
+    //draw suspicion meters
+    ctx.strokeStyle = 'black';
+    penguins.forEach(peng => {
+      if (peng.dead) return;
+      const x = peng.x - MeterWidth / 2;
+      const y = peng.y - peng.rad - MeterDist - MeterHeight;
+      ctx.strokeRect(x, y, MeterWidth, MeterHeight);
+      ctx.fillStyle =
+        MeterColors[Math.floor(peng.suspicion * MeterColors.length)];
+      ctx.fillRect(x, y, peng.suspicion * MeterWidth, MeterHeight);
+    });
+
     ctx.restore();
   }
 }
