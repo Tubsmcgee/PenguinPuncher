@@ -1,16 +1,36 @@
 'use strict';
 
 import {Renderer} from './renderer.js';
-import {collideFix, movePenguin} from './functions.js';
+import {collideFix, movePenguin, movePlayer} from './functions.js';
 
-const init = () => {
-  let player, rocks, penguins, frame;
-  const numPengs = 12;
-  const numRocks = 3;
-  const pressing = {};
+class Game {
+  constructor() {
+    this.level = 1;
+    this.pressing = {};
+    this.renderer = new Renderer({
+      canvas: $('#canvas'),
+      width: 800,
+      height: 400,
+      backgroundImage: 'img/snow.jpg'
+    });
+    this.reset();
+    this.loop();
 
-  const reset = () => {
-    player = {
+    $(window).on('keyup keydown', e => {
+      const key = e.originalEvent.key;
+      this.pressing[key] = e.type === 'keydown';
+      if (this.pressing.r) this.reset();
+      if ((this.gameWon || this.gameLost) && this.pressing.Enter) {
+        this.level = this.gameWon ? this.level + 1 : 1;
+        this.reset();
+      }
+    });
+  }
+  reset() {
+    this.gameWon = false;
+    this.gameLost = false;
+
+    this.player = {
       x: 0,
       y: 0,
       rad: 25,
@@ -19,16 +39,19 @@ const init = () => {
       punchingDuration: 25,
       punchDelay: 85,
       armLength: 50,
-      dead: false
+      dead: false,
+      speed: 2
     };
 
-    rocks = [];
-    penguins = [];
-    frame = 0;
+    this.numPengs = this.level + 2;
+    this.numRocks = Math.floor(this.level / 3);
+    this.rocks = [];
+    this.penguins = [];
+    this.frame = 0;
 
-    for (let i = 0; i < numPengs; i++) {
-      const angle = i / numPengs * 2 * Math.PI;
-      penguins[i] = {
+    for (let i = 0; i < this.numPengs; i++) {
+      const angle = i / this.numPengs * 2 * Math.PI;
+      this.penguins[i] = {
         x: 300 * Math.cos(angle),
         y: 300 * Math.sin(angle),
         type: i % 2,
@@ -44,58 +67,30 @@ const init = () => {
       };
     }
 
-    for (let x = 0; x < numRocks; x++) {
-      const angle = x / numRocks * 2 * Math.PI;
-      rocks[x] = {
+    for (let x = 0; x < this.numRocks; x++) {
+      const angle = x / this.numRocks * 2 * Math.PI;
+      this.rocks[x] = {
         x: 200 * Math.cos(angle),
         y: 200 * Math.sin(angle),
         rad: 30,
         isStationary: true
       };
     }
-  };
+  }
 
-  const renderer = new Renderer({
-    canvas: $('#canvas'),
-    width: 800,
-    height: 400,
-    backgroundImage: 'img/snow.jpg'
-  });
-
-  const loop = () => {
-    player.px = player.x;
-    player.py = player.y;
-    let moveX = 0;
-    let moveY = 0;
-    if (pressing.a || pressing.ArrowLeft) moveX--;
-    if (pressing.s || pressing.ArrowDown) moveY++;
-    if (pressing.d || pressing.ArrowRight) moveX++;
-    if (pressing.w || pressing.ArrowUp) moveY--;
-    if (pressing.f && player.punchCounter < -player.punchDelay) {
-      player.punchCounter = player.punchingDuration;
-    }
-    if (moveX || moveY) {
-      const m = 1 / Math.hypot(moveX, moveY);
-      player.x += moveX * m;
-      player.y += moveY * m;
-      player.langle = Math.atan2(moveY, moveX);
-    }
-    player.punchCounter--;
+  loop() {
+    const {player, pressing, penguins, renderer, frame, loop, rocks} = this;
+    movePlayer(player, pressing);
     penguins.forEach(penguin => movePenguin(penguin, player, frame, rocks));
     collideFix([...penguins, player], rocks);
-    renderer.render(penguins, player, rocks);
 
-    frame++;
-    requestAnimationFrame(loop);
-  };
-  reset();
-  loop();
+    if (player.dead) this.gameLost = true;
+    if (penguins.every(peng => peng.dead)) this.gameWon = true;
 
-  $(window).on('keyup keydown', e => {
-    const key = e.originalEvent.key;
-    pressing[key] = e.type === 'keydown';
-    if (pressing.r) reset();
-  });
-};
+    renderer.render(this);
+    this.frame++;
+    requestAnimationFrame(loop.bind(this));
+  }
+}
 
-init();
+new Game();

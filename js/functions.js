@@ -131,7 +131,8 @@ export const movePenguin = (penguin, player, frame, rocks) => {
         penguin.y += dy * M;
       }
     }
-    if (suspicion > 0.9 && dist < 0.01) player.dead = true;
+    if (suspicion > 0.9 && dist <= player.rad + penguin.rad + 1)
+      player.dead = true;
   } else {
     if (suspicion > suspicionDecrement) penguin.suspicion -= suspicionDecrement;
     movementTypes[type](penguin, frame);
@@ -139,4 +140,25 @@ export const movePenguin = (penguin, player, frame, rocks) => {
       penguin.dead = true;
     }
   }
+};
+
+export const movePlayer = (player, pressing) => {
+  player.px = player.x;
+  player.py = player.y;
+  let moveX = 0;
+  let moveY = 0;
+  if (pressing.a || pressing.ArrowLeft) moveX--;
+  if (pressing.s || pressing.ArrowDown) moveY++;
+  if (pressing.d || pressing.ArrowRight) moveX++;
+  if (pressing.w || pressing.ArrowUp) moveY--;
+  if (pressing.f && player.punchCounter < -player.punchDelay) {
+    player.punchCounter = player.punchingDuration;
+  }
+  if (moveX || moveY) {
+    const m = player.speed / Math.hypot(moveX, moveY);
+    player.x += moveX * m;
+    player.y += moveY * m;
+    player.langle = Math.atan2(moveY, moveX);
+  }
+  player.punchCounter--;
 };

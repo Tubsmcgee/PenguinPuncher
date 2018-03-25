@@ -67,7 +67,7 @@ export class Renderer {
     this.width = width;
     this.height = height;
   }
-  render(penguins, player, rocks) {
+  render({penguins, player, rocks, gameWon, gameLost, level}) {
     const {width, height, canvas} = this;
     const ctx = canvas[0].getContext('2d');
     if (player.px !== player.x || player.py !== player.y) {
@@ -101,5 +101,38 @@ export class Renderer {
     });
 
     ctx.restore();
+
+    //penguin alive and dead counter
+    ctx.fillStyle = 'black';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillText(
+      'Penguins Dead: ' +
+        penguins.filter(peng => peng.dead).length +
+        '/' +
+        penguins.length,
+      this.width - 5,
+      5
+    );
+    if (gameWon || gameLost) {
+      ctx.fillStyle = 'black';
+      ctx.font = '72px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        gameWon ? 'Victory!!!' : 'You SUUUUCK!!!!',
+        width / 2,
+        height / 2
+      );
+      ctx.font = '24px sans-serif';
+      ctx.fillText(
+        gameWon
+          ? `Press Enter to move to level ${level + 1}`
+          : 'Press Enter To Start Over',
+        width / 2,
+        height * 0.75
+      );
+    }
   }
 }
