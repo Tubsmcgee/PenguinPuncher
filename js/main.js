@@ -40,7 +40,8 @@ class Game {
       punchDelay: 85,
       armLength: 50,
       dead: false,
-      speed: 2
+      speed: 2,
+      isPlayer: true
     };
 
     this.numPengs = this.level + 2;
@@ -54,7 +55,6 @@ class Game {
       this.penguins[i] = {
         x: 300 * Math.cos(angle),
         y: 300 * Math.sin(angle),
-        type: i % 2,
         speed: Math.random() * 0.5 + 0.4,
         sightDist: Math.random() * 200 + 200,
         sightAngle: Math.random() * Math.PI / 16 + Math.PI / 4,
@@ -63,7 +63,8 @@ class Game {
         dead: false,
         suspicion: 0,
         suspicionRate: Math.random() / 500,
-        suspicionDecrement: 0.002
+        suspicionDecrement: 0.002,
+        turnAngle: 0.01
       };
     }
 
@@ -82,7 +83,7 @@ class Game {
     const {player, pressing, penguins, renderer, frame, loop, rocks} = this;
     movePlayer(player, pressing);
     penguins.forEach(penguin => movePenguin(penguin, player, frame, rocks));
-    collideFix([...penguins, player], rocks);
+    collideFix([player, ...penguins], rocks);
 
     if (player.dead) this.gameLost = true;
     if (penguins.every(peng => peng.dead)) this.gameWon = true;

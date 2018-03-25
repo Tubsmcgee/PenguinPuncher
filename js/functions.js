@@ -1,3 +1,8 @@
+const getAngle = (dy, dx) => {
+  const a = Math.atan2(dy, dx);
+  return a < 0 ? a + Math.PI * 2 : a;
+};
+
 const isHitting = (player, penguin) => {
   if (player.punchCounter <= 0) return false;
   const fistDist = Math.hypot(player.armLength, player.rad / 2);
@@ -20,6 +25,10 @@ const overlapFix = (a, b) => {
     if (!b.isStationary) {
       b.x -= m * dx;
       b.y -= m * dy;
+      if (a.isPlayer) {
+        b.suspicion = Math.min(1, b.suspicion + 0.02);
+        b.langle = getAngle(dy, dx);
+      }
     }
   }
 };
@@ -65,38 +74,9 @@ const obstructed = (penguin, player, rocks) => {
   }
 };
 
-const getAngle = (dy, dx) => {
-  const a = Math.atan2(dy, dx);
-  return a < 0 ? a + Math.PI * 2 : a;
-};
-
-const movementTypes = [
-  (penguin, frame) => {
-    const cycle = (frame / 800) % 1;
-    if (cycle < 0.4) {
-      penguin.x--;
-      penguin.langle = Math.PI;
-    } else if (cycle > 0.5 && cycle < 0.9) {
-      penguin.x++;
-      penguin.langle = 0;
-    }
-  },
-  (penguin, frame) => {
-    const cycle = (frame / 800) % 1;
-    if (cycle < 0.4) {
-      penguin.y--;
-      penguin.langle = Math.PI * 3 / 2;
-    } else if (cycle > 0.5 && cycle < 0.9) {
-      penguin.y++;
-      penguin.langle = Math.PI / 2;
-    }
-  }
-];
-
 export const movePenguin = (penguin, player, frame, rocks) => {
   const {
     dead,
-    langle,
     x,
     y,
     sightAngle,
@@ -104,13 +84,17 @@ export const movePenguin = (penguin, player, frame, rocks) => {
     suspicion,
     suspicionRate,
     suspicionDecrement,
-    type
+    turnAngle,
+    speed
   } = penguin;
   if (dead) return;
+  let moving = true;
+  const tooPie = Math.PI * 2;
   const dx = player.x - x;
   const dy = player.y - y;
   const dist = Math.hypot(dx, dy);
   const pangle = getAngle(dy, dx);
+  const langle = (penguin.langle % tooPie + tooPie) % tooPie;
   const absDiff = Math.abs(pangle - langle);
   if (
     dist < sightDist &&
@@ -125,20 +109,20 @@ export const movePenguin = (penguin, player, frame, rocks) => {
 
     if (suspicion > 0.25) {
       penguin.langle = pangle;
-      if (dist > sightDist - 50 || suspicion >= 0.5) {
-        const M = penguin.speed / dist;
-        penguin.x += dx * M;
-        penguin.y += dy * M;
-      }
+      moving = dist > sightDist - 100 || suspicion >= 0.5;
     }
     if (suspicion > 0.9 && dist <= player.rad + penguin.rad + 1)
       player.dead = true;
   } else {
     if (suspicion > suspicionDecrement) penguin.suspicion -= suspicionDecrement;
-    movementTypes[type](penguin, frame);
+    penguin.langle += turnAngle;
     if (isHitting(player, penguin)) {
       penguin.dead = true;
     }
+  }
+  if (!penguin.dead && moving) {
+    penguin.x += speed * Math.cos(penguin.langle);
+    penguin.y += speed * Math.sin(penguin.langle);
   }
 };
 
