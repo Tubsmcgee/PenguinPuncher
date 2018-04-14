@@ -88,8 +88,10 @@ export class Renderer {
       ctx.arc(rock.x, rock.y, rock.rad, 0, 2 * Math.PI);
     });
     ctx.fill();
+
     //draw suspicion meters
     ctx.strokeStyle = 'black';
+    ctx.lineWidth = 1;
     penguins.forEach(peng => {
       if (peng.dead) return;
       const x = peng.x - MeterWidth / 2;

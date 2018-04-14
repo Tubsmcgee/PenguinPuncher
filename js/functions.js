@@ -74,14 +74,32 @@ const obstructed = (penguin, player, rocks) => {
   }
 };
 
-export const movePenguin = (penguin, player, frame, rocks) => {
+export const canSee = (a, b, rocks) => {
+  const tooPie = Math.PI * 2;
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  const dist = Math.hypot(dx, dy);
+  const pangle = getAngle(dy, dx);
+  const langle = (a.langle % tooPie + tooPie) % tooPie;
+  const absDiff = Math.abs(pangle - langle);
+
+  return (
+    dist < a.sightDist &&
+    (absDiff < a.sightAngle || absDiff > 2 * Math.PI - a.sightAngle) &&
+    !obstructed(
+      a,
+      b,
+      rocks.filter(rock => Math.hypot(a.x - rock.x, a.y - rock.y) < dist)
+    )
+  );
+};
+
+export const movePenguin = (penguin, player, rocks, deadPengs) => {
   const {
     dead,
     x,
     y,
-    sightAngle,
     sightDist,
-    suspicion,
     suspicionRate,
     suspicionDecrement,
     turnAngle,
@@ -89,32 +107,32 @@ export const movePenguin = (penguin, player, frame, rocks) => {
   } = penguin;
   if (dead) return;
   let moving = true;
-  const tooPie = Math.PI * 2;
-  const dx = player.x - x;
-  const dy = player.y - y;
-  const dist = Math.hypot(dx, dy);
-  const pangle = getAngle(dy, dx);
-  const langle = (penguin.langle % tooPie + tooPie) % tooPie;
-  const absDiff = Math.abs(pangle - langle);
-  if (
-    dist < sightDist &&
-    (absDiff < sightAngle || absDiff > 2 * Math.PI - sightAngle) &&
-    !obstructed(
-      penguin,
-      player,
-      rocks.filter(rock => Math.hypot(x - rock.x, y - rock.y) < dist)
-    )
-  ) {
-    if (suspicion < 1 - suspicionRate) penguin.suspicion += suspicionRate;
+  const seenDead = deadPengs.find(peng => canSee(penguin, peng, rocks));
 
-    if (suspicion > 0.25) {
-      penguin.langle = pangle;
-      moving = dist > sightDist - 100 || suspicion >= 0.5;
+  if (seenDead) {
+    if (penguin.suspicion < 1 - suspicionRate)
+      penguin.suspicion += suspicionRate;
+    if (penguin.suspicion < 0.25) {
+      penguin.langle = getAngle(seenDead.y - y, seenDead.x - x);
+      moving = false;
     }
-    if (suspicion > 0.9 && dist <= player.rad + penguin.rad + 1)
+  }
+
+  if (canSee(penguin, player, rocks)) {
+    if (penguin.suspicion < 1 - suspicionRate)
+      penguin.suspicion += suspicionRate;
+    const dx = player.x - x;
+    const dy = player.y - y;
+    const dist = Math.hypot(dx, dy);
+    if (penguin.suspicion > 0.25) {
+      penguin.langle = getAngle(dy, dx);
+      moving = dist > sightDist - 100 || penguin.suspicion >= 0.5;
+    }
+    if (penguin.suspicion > 0.9 && dist <= player.rad + penguin.rad + 1)
       player.dead = true;
   } else {
-    if (suspicion > suspicionDecrement) penguin.suspicion -= suspicionDecrement;
+    if (penguin.suspicion > suspicionDecrement && !seenDead)
+      penguin.suspicion -= suspicionDecrement;
     penguin.langle += turnAngle;
     if (isHitting(player, penguin)) {
       penguin.dead = true;
@@ -145,4 +163,24 @@ export const movePlayer = (player, pressing) => {
     player.langle = Math.atan2(moveY, moveX);
   }
   player.punchCounter--;
+};
+
+export const createWall = (c1, c2, rad) => {
+  const res = [];
+  const dx = c2.x - c1.x;
+  const dy = c2.y - c1.y;
+  const len = Math.hypot(dx, dy);
+  const num = Math.ceil(len / (rad * 2));
+  for (let i = 0; i < num; i++) {
+    const lineDist = i / num;
+    res[i] = {
+      x: c1.x + lineDist * dx,
+      y: c1.y + lineDist * dy,
+      rad,
+      isStationary: true,
+      length: len,
+      number: num
+    };
+  }
+  return res;
 };
