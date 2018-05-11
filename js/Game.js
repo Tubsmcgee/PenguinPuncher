@@ -1,8 +1,9 @@
 'use strict';
 
 import {Renderer} from './renderer.js';
-import {collideFix, movePenguin, movePlayer, createWall} from './functions.js';
-import {penguinTypes} from './constants.js';
+import {collideFix, createWall} from './functions.js';
+import {PenguinTypes} from './PenguinTypes.js';
+import {Player} from './Player.js';
 
 class Game {
   constructor() {
@@ -30,7 +31,7 @@ class Game {
           typeIndex++;
           if (typeIndex > maxTypeIndex) {
             typeIndex = 0;
-            if (maxTypeIndex < penguinTypes.length - 1) maxTypeIndex++;
+            if (maxTypeIndex < PenguinTypes.length - 1) maxTypeIndex++;
           }
         } else this.reset();
         this.startLevel();
@@ -45,19 +46,7 @@ class Game {
     this.gameWon = false;
     this.gameLost = false;
 
-    this.player = {
-      x: 0,
-      y: 0,
-      rad: 25,
-      langle: 0,
-      punchCounter: 0,
-      punchingDuration: 25,
-      punchDelay: 85,
-      armLength: 50,
-      dead: false,
-      speed: 2,
-      isPlayer: true
-    };
+    this.player = new Player();
 
     this.numRocks = Math.floor(this.level / 3);
     this.rocks = [];
@@ -66,15 +55,13 @@ class Game {
 
     for (let i = 0; i < this.pengTypes.length; i++) {
       const angle = i / this.pengTypes.length * 2 * Math.PI;
-      this.penguins[i] = Object.assign(
-        {
-          x: 300 * Math.cos(angle),
-          y: 300 * Math.sin(angle),
-          langle: angle,
-          dead: false
-        },
-        penguinTypes[this.pengTypes[i]]
-      );
+      const PenguinType = PenguinTypes[this.pengTypes[i]];
+
+      this.penguins[i] = new PenguinType({
+        x: 300 * Math.cos(angle),
+        y: 300 * Math.sin(angle),
+        langle: angle
+      });
     }
 
     for (let x = 0; x < this.numRocks; x++) {
@@ -106,9 +93,9 @@ class Game {
 
   loop() {
     const {player, pressing, penguins, renderer, loop, rocks} = this;
-    movePlayer(player, pressing);
+    player.move(pressing);
     const deadPengs = penguins.filter(el => el.dead);
-    penguins.forEach(penguin => movePenguin(penguin, player, rocks, deadPengs));
+    penguins.forEach(penguin => penguin.move(player, rocks, deadPengs));
     collideFix([player, ...penguins], rocks);
 
     if (player.dead) this.gameLost = true;
